@@ -1,0 +1,339 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: #f7f9f9;
+    color: #2c3e50;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* AUTHENTICATION STYLES */
+.auth-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #1b3a4b, #2d6a4f);
+}
+
+.auth-card {
+    background: #ffffff;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.auth-card h2 {
+    margin-bottom: 0.5rem;
+    color: #1b3a4b;
+}
+
+.subtitle {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    margin-bottom: 1.5rem;
+}
+
+.role-selector {
+    display: flex;
+    margin-bottom: 1.5rem;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #cbd5e1;
+}
+
+.role-btn {
+    flex: 1;
+    padding: 0.6rem;
+    border: none;
+    background: #f8fafc;
+    cursor: pointer;
+    font-weight: 600;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.role-btn.active {
+    background: #2d6a4f;
+    color: #ffffff;
+}
+
+.form-group {
+    margin-bottom: 1.2rem;
+    text-align: left;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    color: #334155;
+}
+
+.form-group input, .form-group select {
+    width: 100%;
+    padding: 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: white;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: #2d6a4f;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.error-msg {
+    color: #e74c3c;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+/* HEADER STYLES */
+.app-header {
+    background: #1b3a4b;
+    color: white;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.badge {
+    background: #475569;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.role-badge {
+    background: #2d6a4f;
+}
+
+.logout-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+/* DASHBOARD GRID */
+.dashboard-grid {
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.card {
+    background: white;
+    padding: 1.8rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.service-desc {
+    color: #64748b;
+    font-size: 0.88rem;
+    margin-bottom: 1.2rem;
+}
+
+.wallet-card {
+    grid-column: span 2;
+    background: linear-gradient(135deg, #ffffff, #f0fdf4);
+    border-left: 5px solid #2d6a4f;
+}
+
+.balance-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #1b3a4b;
+    margin: 0.5rem 0;
+}
+
+/* SERVICE PILL GROUP (MATCHES PHOTO) */
+.service-pill-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.pill-btn {
+    padding: 0.45rem 1rem;
+    border: 1px solid #cbd5e1;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #334155;
+    transition: all 0.2s;
+}
+
+.pill-btn.active {
+    background: #1b3a4b;
+    color: white;
+    border-color: #1b3a4b;
+}
+
+/* STEPPER BOX (MATCHES PHOTO) */
+.stepper-box {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+}
+
+.stepper-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #2d6a4f;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stepper-btn:hover {
+    background: #1b3a4b;
+}
+
+.stepper-value {
+    font-size: 1.2rem;
+    font-weight: bold;
+    min-width: 25px;
+    text-align: center;
+}
+
+/* AMOUNT BANNER (MATCHES PHOTO) */
+.amount-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #e6f4ea;
+    padding: 1rem 1.2rem;
+    border-radius: 8px;
+    margin: 1.2rem 0;
+    font-size: 0.95rem;
+    color: #1b3a4b;
+}
+
+.amount-val {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #1b3a4b;
+}
+
+.action-btn {
+    width: 100%;
+    padding: 0.85rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1rem;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+}
+
+.teal-btn {
+    background: #2d6a4f;
+}
+
+.teal-btn:hover {
+    background: #24563f;
+}
+
+.btn-approve {
+    background: #2d6a4f;
+    color: white;
+    border: none;
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-reject {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    margin-left: 0.3rem;
+}
+
+.token-box {
+    margin-top: 1.2rem;
+    padding: 1rem;
+    background: #f0fdf4;
+    border: 1px solid #2d6a4f;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.token-id {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #2d6a4f;
+    margin: 0.4rem 0;
+}
+
+.full-width {
+    grid-column: span 2;
+}
+
+.table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+th {
+    background: #f8fafc;
+    color: #475569;
+}

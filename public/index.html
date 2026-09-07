@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Hostel - Laundry & Store Card</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- LOGIN CONTAINER -->
+    <div id="login-container" class="auth-container">
+        <div class="auth-card">
+            <h2>Smart Hostel Portal</h2>
+            <p class="subtitle">Digital Laundry & Store Card System</p>
+            
+            <div class="role-selector">
+                <button type="button" class="role-btn active" id="btn-student" onclick="selectRole('student')">Student</button>
+                <button type="button" class="role-btn" id="btn-staff" onclick="selectRole('staff')">Staff</button>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" autocomplete="off">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="Enter username (student1 / staff1 / store1)" required autocomplete="off">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter password" required autocomplete="new-password">
+                </div>
+
+                <div id="login-error" class="error-msg"></div>
+
+                <button type="submit" class="submit-btn">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD CONTAINER -->
+    <div id="dashboard-container" class="dashboard-container hidden">
+        <header class="app-header">
+            <div class="header-brand">
+                <h1>Smart Hostel System</h1>
+            </div>
+            <div class="user-profile">
+                <span id="display-username"></span>
+                <span id="display-id" class="badge"></span>
+                <span id="display-role" class="badge role-badge"></span>
+                <button onclick="handleLogout()" class="logout-btn">Logout</button>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            
+            <!-- STUDENT SECTION: WALLET -->
+            <section class="card wallet-card" id="wallet-card-section">
+                <h3>Digital Balance</h3>
+                <div class="balance-display">
+                    <span class="currency">₹</span>
+                    <span id="wallet-balance">0.00</span>
+                </div>
+                <p class="balance-info">Fee Credit Status: <strong style="color: #27ae60;">Active (Hostel Fee Paid)</strong></p>
+            </section>
+
+            <!-- STUDENT SECTION: LAUNDRY SERVICE (MATCHES PROVIDED UI) -->
+            <section class="card module-card" id="laundry-card-section">
+                <h2>Laundry Service</h2>
+                <p class="service-desc">Choose your laundry service. A token will be generated for staff verification.</p>
+
+                <form id="laundry-form" onsubmit="processLaundryRequest(event)">
+                    <!-- Service Type Buttons -->
+                    <div class="form-group">
+                        <label>Service Type</label>
+                        <div class="service-pill-group">
+                            <button type="button" class="pill-btn" onclick="setLaundryService('Wash Only')">Wash Only</button>
+                            <button type="button" class="pill-btn" onclick="setLaundryService('Wash & Dry')">Wash & Dry</button>
+                            <button type="button" class="pill-btn active" onclick="setLaundryService('Ironing')">Ironing</button>
+                        </div>
+                    </div>
+
+                    <!-- Weight Selector (Shown ONLY for Wash / Wash & Dry) -->
+                    <div class="form-group hidden" id="weight-group">
+                        <label for="laundry-weight">Weight Option</label>
+                        <select id="laundry-weight" onchange="calculateLaundryPrice()">
+                            <option value="5">5 kg - Standard (₹50)</option>
+                            <option value="8">8 kg - Heavy (₹80)</option>
+                        </select>
+                    </div>
+
+                    <!-- Cloth Type Selector (Shown ONLY for Ironing) -->
+                    <div class="form-group" id="cloth-type-group">
+                        <label for="cloth-type">Cloth Type</label>
+                        <select id="cloth-type" onchange="calculateLaundryPrice()">
+                            <option value="Shirt" data-rate="10">Shirt</option>
+                            <option value="Pants" data-rate="10">Pants</option>
+                            <option value="T-Shirt" data-rate="10">T-Shirt</option>
+                            <option value="Bedsheet" data-rate="20">Bedsheet</option>
+                            <option value="Towel" data-rate="10">Towel</option>
+                            <option value="Other" data-rate="10">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- Quantity Stepper (Shown ONLY for Ironing) -->
+                    <div class="form-group" id="quantity-group">
+                        <label>Quantity</label>
+                        <div class="stepper-box">
+                            <button type="button" class="stepper-btn" onclick="adjustCount(-1)">−</button>
+                            <span id="stepper-count" class="stepper-value">8</span>
+                            <button type="button" class="stepper-btn" onclick="adjustCount(1)">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Estimated Amount Banner -->
+                    <div class="amount-banner">
+                        <span>Estimated Amount</span>
+                        <span class="amount-val">₹<span id="laundry-price">80</span></span>
+                    </div>
+
+                    <button type="submit" class="action-btn teal-btn">Generate Laundry Token</button>
+                </form>
+
+                <div id="token-display" class="token-box hidden">
+                    <p>Token Generated Successfully!</p>
+                    <div id="token-number" class="token-id">#0000</div>
+                    <small>Submit clothes with this token. Amount will be debited on laundry staff approval.</small>
+                </div>
+            </section>
+
+            <!-- STUDENT SECTION: STORE MODULE -->
+            <section class="card module-card" id="store-card-section">
+                <h2>Hostel Store & Snacks</h2>
+                <p class="service-desc">Order snacks or stationery. Pay using your digital card after store staff verification.</p>
+
+                <form id="store-form" onsubmit="processStoreOrder(event)">
+                    <div class="form-group">
+                        <label for="store-item">Select Item</label>
+                        <select id="store-item" required onchange="calculateStorePrice()">
+                            <option value="Snacks Box" data-price="30">Snacks Box - ₹30.00</option>
+                            <option value="Cold Drink" data-price="20">Cold Drink - ₹20.00</option>
+                            <option value="Stationery Pack" data-price="50">Stationery Pack - ₹50.00</option>
+                            <option value="Water Bottle" data-price="15">Water Bottle - ₹15.00</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="store-qty">Quantity</label>
+                        <input type="number" id="store-qty" value="1" min="1" max="10" required onchange="calculateStorePrice()">
+                    </div>
+
+                    <div class="amount-banner">
+                        <span>Estimated Amount</span>
+                        <span class="amount-val">₹<span id="store-price">30</span></span>
+                    </div>
+
+                    <button type="submit" class="action-btn teal-btn">Place Store Order</button>
+                </form>
+
+                <div id="store-order-display" class="token-box hidden">
+                    <p>Store Order Placed!</p>
+                    <div id="store-order-token" class="token-id">#ST-0000</div>
+                    <small>Show this token to store staff. Balance is debited upon order hand-over.</small>
+                </div>
+            </section>
+
+            <!-- LAUNDRY STAFF DASHBOARD -->
+            <section class="card full-width hidden" id="laundry-staff-section">
+                <h3>Laundry Verification Desk (staff1)</h3>
+                <p class="service-desc">Inspect clothes and confirm debit from student card.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Token</th>
+                                <th>Student</th>
+                                <th>Service</th>
+                                <th>Details</th>
+                                <th>Amount</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="laundry-requests-body">
+                            <tr><td colspan="6" style="text-align:center;">No pending laundry requests.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- STORE STAFF DASHBOARD -->
+            <section class="card full-width hidden" id="store-staff-section">
+                <h3>Store Counter Desk (store1)</h3>
+                <p class="service-desc">Verify item availability and accept or reject order.</p>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order Token</th>
+                                <th>Student</th>
+                                <th>Item Ordered</th>
+                                <th>Quantity</th>
+                                <th>Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="store-orders-body">
+                            <tr><td colspan="6" style="text-align:center;">No pending store orders.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- TRANSACTIONS HISTORY -->
+            <section class="card full-width" id="tx-card-section">
+                <h3>Transaction History</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Balance After</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tx-history-body">
+                            <tr><td colspan="5" style="text-align:center;">No transactions found.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
