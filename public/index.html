@@ -33,6 +33,10 @@
                 <div id="login-error" class="error-msg"></div>
 
                 <button type="submit" class="submit-btn">Login</button>
+
+                <div class="auth-link-container">
+                    <p>New student? <a href="/signup.html" class="auth-link">Create an Account</a></p>
+                </div>
             </form>
         </div>
     </div>
@@ -63,10 +67,13 @@
                 <p class="balance-info">Fee Credit Status: <strong style="color: #27ae60;">Active (Hostel Fee Paid)</strong></p>
             </section>
 
-            <!-- STUDENT SECTION: LAUNDRY SERVICE (MATCHES PROVIDED UI) -->
+            <!-- STUDENT SECTION: LAUNDRY SERVICE -->
             <section class="card module-card" id="laundry-card-section">
                 <h2>Laundry Service</h2>
                 <p class="service-desc">Choose your laundry service. A token will be generated for staff verification.</p>
+
+                <!-- ACTIVE LAUNDRY STATUS BANNER -->
+                <div id="laundry-active-status-banner" class="status-alert-box hidden"></div>
 
                 <form id="laundry-form" onsubmit="processLaundryRequest(event)">
                     <!-- Service Type Buttons -->
@@ -88,85 +95,88 @@
                         </select>
                     </div>
 
-                    <!-- Cloth Type Selector (Shown ONLY for Ironing) -->
+                    <!-- Collection of Dress Selector (Shown ONLY for Ironing) -->
                     <div class="form-group" id="cloth-type-group">
-                        <label for="cloth-type">Cloth Type</label>
-                        <select id="cloth-type" onchange="calculateLaundryPrice()">
-                            <option value="Shirt" data-rate="10">Shirt</option>
-                            <option value="Pants" data-rate="10">Pants</option>
-                            <option value="T-Shirt" data-rate="10">T-Shirt</option>
-                            <option value="Bedsheet" data-rate="20">Bedsheet</option>
-                            <option value="Towel" data-rate="10">Towel</option>
-                            <option value="Other" data-rate="10">Other</option>
-                        </select>
-                    </div>
+                        <label>Collection of Clothes for Ironing</label>
+                        <p class="collection-hint">Select the quantity for each type of dress in your collection:</p>
+                        
+                        <div class="collection-items-container" id="ironing-dress-list">
+                            <!-- Populated dynamically by script.js -->
+                        </div>
 
-                    <!-- Quantity Stepper (Shown ONLY for Ironing) -->
-                    <div class="form-group" id="quantity-group">
-                        <label>Quantity</label>
-                        <div class="stepper-box">
-                            <button type="button" class="stepper-btn" onclick="adjustCount(-1)">−</button>
-                            <span id="stepper-count" class="stepper-value">8</span>
-                            <button type="button" class="stepper-btn" onclick="adjustCount(1)">+</button>
+                        <div class="collection-summary-box">
+                            <div class="collection-summary-left">
+                                <span class="summary-label">Selected Clothes:</span>
+                                <span id="ironing-collection-summary-text" class="collection-summary-text">None selected</span>
+                            </div>
+                            <span class="collection-pcs-badge" id="ironing-total-pcs">0 pcs</span>
                         </div>
                     </div>
 
                     <!-- Estimated Amount Banner -->
                     <div class="amount-banner">
                         <span>Estimated Amount</span>
-                        <span class="amount-val">₹<span id="laundry-price">80</span></span>
+                        <span class="amount-val">₹<span id="laundry-price">0</span></span>
                     </div>
 
-                    <button type="submit" class="action-btn teal-btn">Generate Laundry Token</button>
+                    <button type="submit" id="laundry-submit-btn" class="action-btn teal-btn">Generate Laundry Token</button>
                 </form>
 
                 <div id="token-display" class="token-box hidden">
-                    <p>Token Generated Successfully!</p>
+                    <p id="token-display-title">Token Generated Successfully!</p>
                     <div id="token-number" class="token-id">#0000</div>
-                    <small>Submit clothes with this token. Amount will be debited on laundry staff approval.</small>
+                    <p id="token-display-details" class="token-details-text"></p>
+                    <small id="token-display-help">Submit clothes with this token. Amount will be debited on laundry staff approval.</small>
                 </div>
             </section>
 
             <!-- STUDENT SECTION: STORE MODULE -->
             <section class="card module-card" id="store-card-section">
                 <h2>Hostel Store & Snacks</h2>
-                <p class="service-desc">Order snacks or stationery. Pay using your digital card after store staff verification.</p>
+                <p class="service-desc">Order snacks, chocolates, beverages or stationery. Multiple items can be ordered together.</p>
+
+                <!-- ACTIVE STORE STATUS BANNER -->
+                <div id="store-active-status-banner" class="status-alert-box hidden"></div>
 
                 <form id="store-form" onsubmit="processStoreOrder(event)">
                     <div class="form-group">
-                        <label for="store-item">Select Item</label>
-                        <select id="store-item" required onchange="calculateStorePrice()">
-                            <option value="Snacks Box" data-price="30">Snacks Box - ₹30.00</option>
-                            <option value="Cold Drink" data-price="20">Cold Drink - ₹20.00</option>
-                            <option value="Stationery Pack" data-price="50">Stationery Pack - ₹50.00</option>
-                            <option value="Water Bottle" data-price="15">Water Bottle - ₹15.00</option>
-                        </select>
+                        <label>Select Items to Order</label>
+                        <div class="store-catalog-grid" id="store-catalog-grid">
+                            <!-- Populated dynamically by script.js -->
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="store-qty">Quantity</label>
-                        <input type="number" id="store-qty" value="1" min="1" max="10" required onchange="calculateStorePrice()">
+                    <!-- STORE ORDER CART -->
+                    <div class="store-cart-container" id="store-cart-container">
+                        <div class="cart-header">
+                            <h4>Selected Items Cart</h4>
+                            <span class="cart-count-badge" id="cart-total-items-badge">0 items</span>
+                        </div>
+                        <div id="store-cart-items" class="cart-items-list">
+                            <p class="empty-cart-msg">No items added yet. Click (+) on any item above to add to your order.</p>
+                        </div>
                     </div>
 
                     <div class="amount-banner">
-                        <span>Estimated Amount</span>
-                        <span class="amount-val">₹<span id="store-price">30</span></span>
+                        <span>Total Estimated Amount</span>
+                        <span class="amount-val">₹<span id="store-price">0</span></span>
                     </div>
 
-                    <button type="submit" class="action-btn teal-btn">Place Store Order</button>
+                    <button type="submit" id="store-submit-btn" class="action-btn teal-btn">Place Store Order</button>
                 </form>
 
                 <div id="store-order-display" class="token-box hidden">
-                    <p>Store Order Placed!</p>
+                    <p id="store-order-title">Store Order Placed!</p>
                     <div id="store-order-token" class="token-id">#ST-0000</div>
-                    <small>Show this token to store staff. Balance is debited upon order hand-over.</small>
+                    <p id="store-order-details" class="token-details-text"></p>
+                    <small id="store-order-help">Show this token to store staff. Balance is debited upon order confirmation.</small>
                 </div>
             </section>
 
             <!-- LAUNDRY STAFF DASHBOARD -->
             <section class="card full-width hidden" id="laundry-staff-section">
-                <h3>Laundry Verification Desk (staff1)</h3>
-                <p class="service-desc">Inspect clothes and confirm debit from student card.</p>
+                <h3>Laundry Verification Desk (<span id="laundry-staff-username-label">staff1</span>)</h3>
+                <p class="service-desc">Inspect clothes and confirm debit from student card, or reject with a reason.</p>
                 <div class="table-container">
                     <table>
                         <thead>
@@ -174,9 +184,9 @@
                                 <th>Token</th>
                                 <th>Student</th>
                                 <th>Service</th>
-                                <th>Details</th>
+                                <th>Collection / Details</th>
                                 <th>Amount</th>
-                                <th>Action</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="laundry-requests-body">
@@ -184,21 +194,74 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- TODAY'S LAUNDRY TRANSACTION HISTORY -->
+                <div class="staff-history-section">
+                    <div class="staff-history-header">
+                        <div>
+                            <h4>Laundry Transaction History (<span id="laundry-history-title-label">Today</span>)</h4>
+                            <p class="service-desc" style="margin-bottom: 0;">Processed laundry requests and card debits for this desk.</p>
+                        </div>
+                        <div class="history-filter-group">
+                            <button type="button" class="filter-tab-btn active" id="laundry-filter-today-btn" onclick="switchLaundryHistoryFilter('today')">Today</button>
+                            <button type="button" class="filter-tab-btn" id="laundry-filter-all-btn" onclick="switchLaundryHistoryFilter('all')">All History</button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Metric Cards -->
+                    <div class="staff-summary-metrics">
+                        <div class="metric-card">
+                            <span class="metric-title">Today's Total Handled</span>
+                            <span class="metric-value" id="laundry-metric-total">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Approved & Debited</span>
+                            <span class="metric-value text-green" id="laundry-metric-approved">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Rejected Orders</span>
+                            <span class="metric-value text-red" id="laundry-metric-rejected">0</span>
+                        </div>
+                        <div class="metric-card highlight">
+                            <span class="metric-title">Today's Revenue Collected</span>
+                            <span class="metric-value text-teal">₹<span id="laundry-metric-revenue">0.00</span></span>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Token</th>
+                                    <th>Student</th>
+                                    <th>Service & Collection</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                    <th>Remarks / Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody id="laundry-history-body">
+                                <tr><td colspan="7" style="text-align:center;">No laundry transactions recorded today.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </section>
 
             <!-- STORE STAFF DASHBOARD -->
             <section class="card full-width hidden" id="store-staff-section">
-                <h3>Store Counter Desk (store1)</h3>
-                <p class="service-desc">Verify item availability and accept or reject order.</p>
+                <h3>Store Counter Desk (<span id="store-staff-username-label">store1</span>)</h3>
+                <p class="service-desc">Verify item availability and confirm debit or reject order.</p>
                 <div class="table-container">
                     <table>
                         <thead>
                             <tr>
                                 <th>Order Token</th>
                                 <th>Student</th>
-                                <th>Item Ordered</th>
-                                <th>Quantity</th>
-                                <th>Total</th>
+                                <th>Items Ordered</th>
+                                <th>Total Quantity</th>
+                                <th>Total Amount</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -206,6 +269,60 @@
                             <tr><td colspan="6" style="text-align:center;">No pending store orders.</td></tr>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- TODAY'S STORE TRANSACTION HISTORY -->
+                <div class="staff-history-section">
+                    <div class="staff-history-header">
+                        <div>
+                            <h4>Store Transaction History (<span id="store-history-title-label">Today</span>)</h4>
+                            <p class="service-desc" style="margin-bottom: 0;">Processed store sales, counter handovers and card debits.</p>
+                        </div>
+                        <div class="history-filter-group">
+                            <button type="button" class="filter-tab-btn active" id="store-filter-today-btn" onclick="switchStoreHistoryFilter('today')">Today</button>
+                            <button type="button" class="filter-tab-btn" id="store-filter-all-btn" onclick="switchStoreHistoryFilter('all')">All History</button>
+                        </div>
+                    </div>
+
+                    <!-- Summary Metric Cards -->
+                    <div class="staff-summary-metrics">
+                        <div class="metric-card">
+                            <span class="metric-title">Today's Orders Handled</span>
+                            <span class="metric-value" id="store-metric-total">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Approved & Debited</span>
+                            <span class="metric-value text-green" id="store-metric-approved">0</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-title">Rejected / Out of Stock</span>
+                            <span class="metric-value text-red" id="store-metric-rejected">0</span>
+                        </div>
+                        <div class="metric-card highlight">
+                            <span class="metric-title">Today's Sales Revenue</span>
+                            <span class="metric-value text-teal">₹<span id="store-metric-revenue">0.00</span></span>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date & Time</th>
+                                    <th>Order Token</th>
+                                    <th>Student</th>
+                                    <th>Items Ordered</th>
+                                    <th>Total Qty</th>
+                                    <th>Total Amount</th>
+                                    <th>Status</th>
+                                    <th>Remarks / Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody id="store-history-body">
+                                <tr><td colspan="8" style="text-align:center;">No store transactions recorded today.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </section>
 
@@ -231,6 +348,68 @@
             </section>
 
         </main>
+    </div>
+
+    <!-- LAUNDRY REJECT MODAL -->
+    <div id="laundry-reject-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Reject Laundry Request</h3>
+                <button type="button" class="close-modal-btn" onclick="closeLaundryRejectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-token-info">Request: <strong id="reject-modal-token">#TK-0000</strong> for <strong id="reject-modal-student">student</strong></p>
+                <p class="modal-subtext" id="reject-modal-details"></p>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="laundry-reject-reason-input">Reason for Rejection <span style="color:#e74c3c;">*</span></label>
+                    <textarea id="laundry-reject-reason-input" rows="3" placeholder="Enter reason for rejecting this laundry request (e.g. Torn clothes, capacity full)..."></textarea>
+                </div>
+                <div class="quick-reasons-group">
+                    <span class="quick-reasons-label">Quick Suggestions:</span>
+                    <div class="reason-chips">
+                        <button type="button" class="chip-btn" onclick="setLaundryRejectReason('Torn / damaged clothes')">Torn / damaged clothes</button>
+                        <button type="button" class="chip-btn" onclick="setLaundryRejectReason('Laundry capacity full for today')">Capacity full</button>
+                        <button type="button" class="chip-btn" onclick="setLaundryRejectReason('Cloth count does not match')">Cloth count mismatch</button>
+                        <button type="button" class="chip-btn" onclick="setLaundryRejectReason('Delicate fabric not suitable for ironing')">Delicate fabric</button>
+                        <button type="button" class="chip-btn" onclick="setLaundryRejectReason('Muddy / excessively soiled clothes')">Heavily soiled clothes</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn-cancel" onclick="closeLaundryRejectModal()">Cancel</button>
+                <button type="button" class="modal-btn-reject" onclick="confirmLaundryReject()">Confirm Rejection</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STORE REJECT MODAL -->
+    <div id="store-reject-modal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Reject Store Order</h3>
+                <button type="button" class="close-modal-btn" onclick="closeStoreRejectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-token-info">Order: <strong id="store-reject-modal-token">#ST-0000</strong> for <strong id="store-reject-modal-student">student</strong></p>
+                <p class="modal-subtext" id="store-reject-modal-details"></p>
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label for="store-reject-reason-input">Reason for Rejection (Optional)</label>
+                    <textarea id="store-reject-reason-input" rows="2" placeholder="Reason (defaults to 'Out of Stock')"></textarea>
+                </div>
+                <div class="quick-reasons-group">
+                    <span class="quick-reasons-label">Quick Suggestions:</span>
+                    <div class="reason-chips">
+                        <button type="button" class="chip-btn" onclick="setStoreRejectReason('Out of Stock')">Out of Stock</button>
+                        <button type="button" class="chip-btn" onclick="setStoreRejectReason('Store counter closing now')">Store closing</button>
+                        <button type="button" class="chip-btn" onclick="setStoreRejectReason('Partial items unavailable')">Partial items unavailable</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn-cancel" onclick="closeStoreRejectModal()">Cancel</button>
+                <button type="button" class="modal-btn-reject" onclick="confirmStoreReject()">Confirm Rejection</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

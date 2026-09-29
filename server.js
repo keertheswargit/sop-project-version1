@@ -27,6 +27,100 @@ pool.query("SELECT NOW()", (err) => {
   }
 });
 
+// Strong Password Validation Helper
+function validateStrongPassword(password) {
+  if (!password || typeof password !== "string") {
+    return { valid: false, message: "Password is required" };
+  }
+  if (password.length < 8) {
+    return { valid: false, message: "Password must be at least 8 characters long" };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one uppercase letter (A-Z)" };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one lowercase letter (a-z)" };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one numeric digit (0-9)" };
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    return { valid: false, message: "Password must contain at least one special character (!@#$%^&*...)" };
+  }
+  return { valid: true };
+}
+
+// Student Registration API
+app.post("/api/register", async (req, res) => {
+  const { username, password, confirmPassword } = req.body;
+
+  if (!username || typeof username !== "string" || !username.trim()) {
+    return res.status(400).json({ success: false, message: "Student Username / Roll Number is required" });
+  }
+
+  const trimmedUsername = username.trim();
+
+  const passwordValidation = validateStrongPassword(password);
+  if (!passwordValidation.valid) {
+    return res.status(400).json({ success: false, message: passwordValidation.message });
+  }
+
+  if (confirmPassword !== undefined && password !== confirmPassword) {
+    return res.status(400).json({ success: false, message: "Passwords do not match" });
+  }
+
+  const client = await pool.connect();
+  let inTransaction = false;
+
+  try {
+    // Check if username already exists (case-insensitive)
+    const existingUser = await client.query(
+      "SELECT id FROM users WHERE LOWER(username) = LOWER($1)",
+      [trimmedUsername]
+    );
+
+    if (existingUser.rows.length > 0) {
+      return res.status(400).json({ success: false, message: "Username is already taken" });
+    }
+
+    // Hash password with bcrypt (salt rounds = 10)
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await client.query("BEGIN");
+    inTransaction = true;
+
+    // Insert student with initial fee credit balance of 1000.00
+    const insertUserRes = await client.query(
+      `INSERT INTO users (username, password_hash, role, balance)
+       VALUES ($1, $2, 'student', 1000.00)
+       RETURNING id`,
+      [trimmedUsername, hashedPassword]
+    );
+
+    const newUserId = insertUserRes.rows[0].id;
+
+    // Record initial credit in transactions table
+    await client.query(
+      `INSERT INTO transactions (user_id, transaction_type, description, amount, balance_after)
+       VALUES ($1, 'CREDIT', 'Initial Hostel Fee Digital Card Allocation', 1000.00, 1000.00)`,
+      [newUserId]
+    );
+
+    await client.query("COMMIT");
+    inTransaction = false;
+
+    return res.json({ success: true, message: "Registration successful!" });
+  } catch (err) {
+    if (inTransaction) {
+      await client.query("ROLLBACK");
+    }
+    console.error("Registration error:", err);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  } finally {
+    client.release();
+  }
+});
+
 // Authentication API
 app.post("/api/login", async (req, res) => {
   const { username, password, role } = req.body;
@@ -105,7 +199,7 @@ app.get("/api/transactions/:username", async (req, res) => {
 
 // ----------------- LAUNDRY SERVICE -----------------
 
-// Student creates laundry request (Ironing: pieces, Wash: kg)
+// Student creates laundry request (Ironing: collection of dress / pieces, Wash: kg)
 app.post("/api/laundry/request", async (req, res) => {
   const { username, service, weight, cloth_type, quantity, amount } = req.body;
   const numAmount = parseFloat(amount);
@@ -117,17 +211,30 @@ app.post("/api/laundry/request", async (req, res) => {
     }
 
     const user = userRes.rows[0];
+
+    // Concurrency check: Cannot order laundry if already laundry takes place (PENDING request)
+    const activeReq = await pool.query(
+      "SELECT id, token_number FROM laundry_requests WHERE user_id = $1 AND status = 'PENDING'",
+      [user.id]
+    );
+    if (activeReq.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `You already have an active laundry request (${activeReq.rows[0].token_number}) in progress. Please wait until it is processed or rejected before submitting a new one.`
+      });
+    }
+
     if (parseFloat(user.balance) < numAmount) {
       return res.status(400).json({ success: false, message: "Insufficient wallet balance" });
     }
 
     const tokenNumber = "TK-" + Math.floor(1000 + Math.random() * 9000);
 
-    // If Ironing, weight is null and quantity is parsed.
-    // If Wash, quantity and cloth_type are null.
+    // If Ironing: weight is null, cloth_type is collection summary, quantity is total pieces
+    // If Wash: quantity and cloth_type are null, weight is parsed
     const isIroning = service === "Ironing";
     const weightVal = isIroning ? null : (parseInt(weight) || 5);
-    const clothVal = isIroning ? (cloth_type || "Shirt") : null;
+    const clothVal = isIroning ? (cloth_type || "Clothes Collection") : null;
     const qtyVal = isIroning ? (parseInt(quantity) || 1) : null;
 
     await pool.query(
@@ -196,7 +303,7 @@ app.post("/api/staff/laundry-approve", async (req, res) => {
 
     let desc = `Laundry (${request.token_number}): ${request.service_type}`;
     if (request.service_type === "Ironing") {
-      desc += ` - ${request.quantity}x ${request.cloth_type}`;
+      desc += ` - ${request.quantity} pcs (${request.cloth_type})`;
     } else {
       desc += ` - ${request.weight_kg}kg`;
     }
@@ -220,9 +327,76 @@ app.post("/api/staff/laundry-approve", async (req, res) => {
   }
 });
 
+// Laundry Staff: Reject with reasons text box
+app.post("/api/staff/laundry-reject", async (req, res) => {
+  const { requestId, reason } = req.body;
+
+  if (!reason || !reason.trim()) {
+    return res.status(400).json({ success: false, message: "Rejection reason is required." });
+  }
+
+  try {
+    const result = await pool.query(
+      "UPDATE laundry_requests SET status = 'REJECTED', rejection_reason = $1 WHERE id = $2 AND status = 'PENDING' RETURNING token_number",
+      [reason.trim(), requestId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: "Request not found or already processed" });
+    }
+
+    res.json({
+      success: true,
+      message: `Token ${result.rows[0].token_number} rejected. Reason: ${reason.trim()}`
+    });
+  } catch (err) {
+    console.error("Laundry rejection error:", err);
+    res.status(500).json({ success: false, message: "Failed to reject laundry request" });
+  }
+});
+
+// Laundry Staff: Fetch transaction history (Today or All)
+app.get("/api/staff/laundry-history", async (req, res) => {
+  const filter = req.query.filter === "all" ? "all" : "today";
+  try {
+    let query = `
+      SELECT id, token_number, user_id, username, service_type, cloth_type, quantity, weight_kg, amount, status, rejection_reason, created_at
+      FROM laundry_requests
+      WHERE status IN ('APPROVED', 'REJECTED')
+    `;
+
+    if (filter === "today") {
+      query += ` AND DATE(created_at) = CURRENT_DATE`;
+    }
+    query += ` ORDER BY created_at DESC`;
+
+    const result = await pool.query(query);
+
+    const summaryRes = await pool.query(`
+      SELECT 
+        COUNT(*)::int as total_today,
+        COUNT(*) FILTER (WHERE status = 'APPROVED')::int as approved_today,
+        COUNT(*) FILTER (WHERE status = 'REJECTED')::int as rejected_today,
+        COALESCE(SUM(amount) FILTER (WHERE status = 'APPROVED'), 0)::numeric as revenue_today
+      FROM laundry_requests
+      WHERE status IN ('APPROVED', 'REJECTED') AND DATE(created_at) = CURRENT_DATE
+    `);
+
+    res.json({
+      success: true,
+      filter,
+      history: result.rows,
+      summary: summaryRes.rows[0]
+    });
+  } catch (err) {
+    console.error("Fetch laundry history error:", err);
+    res.status(500).json({ success: false, message: "Could not fetch laundry transaction history" });
+  }
+});
+
 // ----------------- STORE SERVICE -----------------
 
-// Student creates store order
+// Student creates store order (Multiple items supported)
 app.post("/api/store/order", async (req, res) => {
   const { username, item_name, quantity, total_amount } = req.body;
   const numAmount = parseFloat(total_amount);
@@ -234,6 +408,19 @@ app.post("/api/store/order", async (req, res) => {
     }
 
     const user = userRes.rows[0];
+
+    // Concurrency check: after confirming order only we can place another order
+    const activeOrder = await pool.query(
+      "SELECT id, order_token FROM store_orders WHERE user_id = $1 AND status = 'PENDING'",
+      [user.id]
+    );
+    if (activeOrder.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `You already have a pending store order (${activeOrder.rows[0].order_token}). You can place another order only after this order is confirmed by the store counter.`
+      });
+    }
+
     if (parseFloat(user.balance) < numAmount) {
       return res.status(400).json({ success: false, message: "Insufficient wallet balance" });
     }
@@ -243,7 +430,7 @@ app.post("/api/store/order", async (req, res) => {
     await pool.query(
       `INSERT INTO store_orders (order_token, user_id, username, item_name, quantity, total_amount, status)
        VALUES ($1, $2, $3, $4, $5, $6, 'PENDING')`,
-      [orderToken, user.id, username, item_name, parseInt(quantity), numAmount]
+      [orderToken, user.id, username, item_name, parseInt(quantity) || 1, numAmount]
     );
 
     res.json({
@@ -299,7 +486,7 @@ app.post("/api/staff/store-approve", async (req, res) => {
     const newBalance = currentBalance - deductAmount;
     await client.query("UPDATE users SET balance = $1 WHERE id = $2", [newBalance, user.id]);
 
-    const desc = `Store (${order.order_token}): ${order.quantity}x ${order.item_name}`;
+    const desc = `Store (${order.order_token}): ${order.item_name}`;
     await client.query(
       `INSERT INTO transactions (user_id, transaction_type, description, amount, balance_after)
        VALUES ($1, 'STORE', $2, $3, $4)`,
@@ -319,14 +506,15 @@ app.post("/api/staff/store-approve", async (req, res) => {
   }
 });
 
-// Store Staff: Reject / Out of Stock
+// Store Staff: Reject / Out of Stock (with optional reason)
 app.post("/api/staff/store-reject", async (req, res) => {
-  const { orderId } = req.body;
+  const { orderId, reason } = req.body;
+  const rejectReason = (reason && reason.trim()) ? reason.trim() : "Out of Stock";
 
   try {
     const result = await pool.query(
-      "UPDATE store_orders SET status = 'REJECTED' WHERE id = $1 AND status = 'PENDING' RETURNING order_token",
-      [orderId]
+      "UPDATE store_orders SET status = 'REJECTED', rejection_reason = $1 WHERE id = $2 AND status = 'PENDING' RETURNING order_token",
+      [rejectReason, orderId]
     );
 
     if (result.rows.length === 0) {
@@ -335,11 +523,93 @@ app.post("/api/staff/store-reject", async (req, res) => {
 
     res.json({
       success: true,
-      message: `Order ${result.rows[0].order_token} rejected (Out of Stock). No money debited.`
+      message: `Order ${result.rows[0].order_token} rejected (${rejectReason}). No money debited.`
     });
   } catch (err) {
     console.error("Store rejection error:", err);
     res.status(500).json({ success: false, message: "Failed to reject store order" });
+  }
+});
+
+// Store Staff: Fetch transaction history (Today or All)
+app.get("/api/staff/store-history", async (req, res) => {
+  const filter = req.query.filter === "all" ? "all" : "today";
+  try {
+    let query = `
+      SELECT id, order_token, user_id, username, item_name, quantity, total_amount, status, rejection_reason, created_at
+      FROM store_orders
+      WHERE status IN ('APPROVED', 'REJECTED')
+    `;
+
+    if (filter === "today") {
+      query += ` AND DATE(created_at) = CURRENT_DATE`;
+    }
+    query += ` ORDER BY created_at DESC`;
+
+    const result = await pool.query(query);
+
+    const summaryRes = await pool.query(`
+      SELECT 
+        COUNT(*)::int as total_today,
+        COUNT(*) FILTER (WHERE status = 'APPROVED')::int as approved_today,
+        COUNT(*) FILTER (WHERE status = 'REJECTED')::int as rejected_today,
+        COALESCE(SUM(total_amount) FILTER (WHERE status = 'APPROVED'), 0)::numeric as revenue_today
+      FROM store_orders
+      WHERE status IN ('APPROVED', 'REJECTED') AND DATE(created_at) = CURRENT_DATE
+    `);
+
+    res.json({
+      success: true,
+      filter,
+      history: result.rows,
+      summary: summaryRes.rows[0]
+    });
+  } catch (err) {
+    console.error("Fetch store history error:", err);
+    res.status(500).json({ success: false, message: "Could not fetch store transaction history" });
+  }
+});
+
+// Student Active Status (Pending Laundry & Store Orders)
+app.get("/api/student/:username/status", async (req, res) => {
+  const { username } = req.params;
+  try {
+    const userRes = await pool.query("SELECT id, balance FROM users WHERE username = $1", [username]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+    const userId = userRes.rows[0].id;
+
+    const pendingLaundry = await pool.query(
+      "SELECT * FROM laundry_requests WHERE user_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 1",
+      [userId]
+    );
+
+    const latestLaundry = await pool.query(
+      "SELECT * FROM laundry_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+      [userId]
+    );
+
+    const pendingStore = await pool.query(
+      "SELECT * FROM store_orders WHERE user_id = $1 AND status = 'PENDING' ORDER BY created_at DESC LIMIT 1",
+      [userId]
+    );
+
+    const latestStore = await pool.query(
+      "SELECT * FROM store_orders WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1",
+      [userId]
+    );
+
+    res.json({
+      success: true,
+      pendingLaundry: pendingLaundry.rows[0] || null,
+      latestLaundry: latestLaundry.rows[0] || null,
+      pendingStore: pendingStore.rows[0] || null,
+      latestStore: latestStore.rows[0] || null,
+    });
+  } catch (err) {
+    console.error("Student status fetch error:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch student status" });
   }
 });
 
